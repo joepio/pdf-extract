@@ -787,7 +787,7 @@ impl<'a> dyn PdfFont + 'a {
         let strings = self
             .char_codes(chars)
             // TODO: handle error, don't unwrap
-            .map(|x| self.decode_char(x.0).unwrap())
+            .map(|x| self.decode_char(x.0).unwrap_or(String::new()))
             .collect::<Vec<_>>();
         strings.join("")
     }
@@ -816,15 +816,14 @@ impl<'a> PdfFont for PdfSimpleFont<'a> {
     fn next_char(&self, iter: &mut Iter<u8>) -> Option<(CharCode, u8)> {
         iter.next().map(|x| (*x as CharCode, 1))
     }
-    fn decode_char(&self, char: CharCode) -> Res<String> {
-        let slice = [char as u8];
-        if let Some(ref unicode_map) = self.unicode_map {
-            let s = unicode_map.get(&char);
-            let s = match s {
-                None => Err(format!("missing char {:?} in map {:?}", char, unicode_map).into()),
-                Some(s) => Ok(s.clone()),
+    fn decode_char(&self, ch: CharCode) -> Res<String> {
+        let slice = [ch as u8];
+        if let Some(unicode_map) = &self.unicode_map {
+            if let Some(s) = unicode_map.get(&ch) {
+                return Ok(s.clone());
             };
-            return s;
+            dlog!("missing char {:?} in map {:?}", ch, unicode_map);
+            return Ok(String::new());
         }
         let encoding = self
             .encoding
@@ -860,17 +859,14 @@ impl<'a> PdfFont for PdfType3Font<'a> {
     fn next_char(&self, iter: &mut Iter<u8>) -> Option<(CharCode, u8)> {
         iter.next().map(|x| (*x as CharCode, 1))
     }
-    fn decode_char(&self, char: CharCode) -> Res<String> {
-        let slice = [char as u8];
-        if let Some(ref unicode_map) = self.unicode_map {
-            let s = unicode_map.get(&char);
-            let s = match s {
-                None => {
-                    return Err(format!("missing char {:?} in map {:?}", char, unicode_map).into())
-                }
-                Some(s) => s.clone(),
+    fn decode_char(&self, ch: CharCode) -> Res<String> {
+        let slice = [ch as u8];
+        if let Some(unicode_map) = &self.unicode_map {
+            if let Some(s) = unicode_map.get(&ch) {
+                return Ok(s.clone());
             };
-            return Ok(s);
+            dlog!("missing char {:?} in map {:?}", ch, unicode_map);
+            return Ok(String::new());
         }
         let encoding = self
             .encoding
@@ -1063,20 +1059,17 @@ impl<'a> PdfFont for PdfCIDFont<'a> {
             None
         }
     }
-    fn decode_char(&self, char: CharCode) -> Res<String> {
-        let s = self.to_unicode.as_ref().and_then(|x| x.get(&char));
-        let o = if let Some(s) = s {
-            s.clone()
-        } else {
-            dlog!(
-                "Unknown character {:?} in {:?} {:?}",
-                char,
-                self.font,
-                self.to_unicode
-            );
-            "".to_string()
-        };
-        Ok(o)
+    fn decode_char(&self, ch: CharCode) -> Res<String> {
+        if let Some(s) = self.to_unicode.as_ref().and_then(|x| x.get(&ch)) {
+            return Ok(s.clone());
+        }
+        dlog!(
+            "missing char {:?} in {:?} {:?}",
+            ch,
+            self.font,
+            self.to_unicode
+        );
+        Ok(String::new())
     }
 }
 
