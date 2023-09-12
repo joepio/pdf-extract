@@ -15,21 +15,17 @@ macro_rules! expected {
 // and then check if the text is correctly extracted
 #[test]
 fn extract_expected_text() {
-    let docs = vec![expected!("documents_stack.pdf.link", "mouse button until")];
+    let docs = vec![
+        expected!("documents_stack.pdf", "mouse button until"),
+        expected!("complex.pdf", "communicate state changes"),
+        expected!("simple.pdf", "And more text"),
+        expected!("version1_2.pdf", "HERE IS ALL CAPS"),
+        expected!("version1_3.pdf", "HERE IS ALL CAPS"),
+        expected!("from_macos_pages.pdf", "hope this works"),
+        expected!("alternate-color-space.pdf", ""),
+    ];
     for doc in docs {
         doc.test();
-    }
-}
-
-#[test]
-// iterate over all docs in the `tests/docs` directory, don't crash
-fn extract_all_docs() {
-    let docs = std::fs::read_dir("tests/docs").unwrap();
-    for doc in docs {
-        let doc = doc.unwrap();
-        let path = doc.path();
-        let filename = path.file_name().unwrap().to_string_lossy();
-        expected!(&filename, "").test();
     }
 }
 
@@ -46,27 +42,9 @@ impl ExpectedText<'_> {
     /// If the file ends with `_link`, it will download the file from the url in the file to the `tests/docs_cache` directory
     fn test(self) {
         let ExpectedText { filename, text } = self;
-        let file_path = if filename.ends_with(".pdf.link") {
-            let docs_cache = "tests/docs_cache";
-            if !std::path::Path::new(docs_cache).exists() {
-                std::fs::create_dir(docs_cache).unwrap();
-            }
-            let file_path = format!("{}/{}", docs_cache, filename.replace(".link", ""));
-            if std::path::Path::new(&file_path).exists() {
-                file_path
-            } else {
-                let url = std::fs::read_to_string(format!("tests/docs/{}", filename)).unwrap();
-                let resp = ureq::get(&url).call().unwrap();
-                let mut file = std::fs::File::create(&file_path).unwrap();
-                std::io::copy(&mut resp.into_reader(), &mut file).unwrap();
-                file_path
-            }
-        } else {
-            format!("tests/docs/{}", filename)
-        };
+        let file_path = format!("tests/docs/{}", filename);
         let out = extract_text(file_path)
             .unwrap_or_else(|e| panic!("Failed to extract text from {}, {}", filename, e));
-        println!("{}", out);
         assert!(
             out.contains(text),
             "Text {} does not contain '{}'",

@@ -1,8 +1,8 @@
 [package]
-authors = ["Jeff Muizelaar <jmuizelaar@mozilla.com>"]
+authors = ["Jeff Muizelaar <jmuizelaar@mozilla.com>", "Joep Meindertsma <joep@ontola.io>"]
 description = "A library to extract content from pdfs"
 documentation = "https://docs.rs/crate/pdf-extract/"
-edition = "2018"
+edition = "2021"
 keywords = ["pdf2text", "text", "pdf", "pdf2txt"]
 license = "MIT"
 name = "pdf-extract"
@@ -18,7 +18,7 @@ adobe-cmap-parser = "0.4.0"
 encoding = "0.2.33"
 euclid = "0.20.5"
 lopdf = {version = "0.30", default-features = false, features = ["nom_parser"]}
-postscript = "0.14"
+postscript = "0.17"
 type1-encoding-parser = "0.1.0"
 unicode-normalization = "0.1.19"
 
